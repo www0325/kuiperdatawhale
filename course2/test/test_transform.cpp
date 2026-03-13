@@ -14,3 +14,13 @@ TEST(test_transform, transform1) {
   f1.Transform(MinusOne);
   f1.Show();
 }
+
+float ReLu(float value) { return std::max(0.f, value); }
+TEST(test_transform, transform2) {
+  using namespace kuiper_infer;
+  Tensor<float> f1(3, 4, 5);
+  f1.Rand();
+  f1.Show();
+  f1.Transform(ReLu);
+  f1.Show();
+}

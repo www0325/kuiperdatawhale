@@ -1,0 +1,5 @@
+Log file created at: 2026/03/07 09:21:18
+Running on machine: 0b51b8c8190a
+Running duration (h:mm:ss): 0:00:00
+Log line format: [IWEF]yyyymmdd hh:mm:ss.uuuuuu threadid file:line] msg
+F20260307 09:21:18.842994 69480 tensor.cpp:104] Check failed: data.n_rows == this->data_.n_rows 12 != 4

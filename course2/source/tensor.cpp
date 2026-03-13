@@ -166,6 +166,42 @@ void Tensor<float>::Padding(const std::vector<uint32_t>& pads,
   uint32_t pad_cols2 = pads.at(3);  // right
 
   // 请补充代码
+  uint32_t rows = this->rows();
+  uint32_t cols = this->cols();
+  uint32_t channels = this->channels();
+  uint32_t new_rows = rows + pad_rows1 + pad_rows2;
+  uint32_t new_cols = cols + pad_cols1 + pad_cols2;
+  // 思路：新建fmat再移动赋值会报错，因为改变了size，因而只能重建整个fcube即data
+
+  //优化1：构造的同时fill
+  /*
+  arma::fcube new_data(new_rows,new_cols,channels);
+  new_data.fill(padding_value);
+  */
+  arma::fcube new_data(new_rows,new_cols,channels,arma::fill::value(padding_value));
+
+  //优化2：调用subcube(start_row, start_col, start_slice, end_row, end_col, end_slice)
+  /*
+  for(uint32_t i=0 ; i<channels ; i++){
+    for(uint32_t j=0 ; j<rows ; j++){
+      for(uint32_t k=0 ; k<cols ; k++){
+        new_data.at(pad_rows1+j,pad_cols1+k,i) = this->at(i,j,k);
+      }
+    }
+  }*/
+  new_data.subcube(pad_rows1,pad_cols1,0,pad_rows1+rows-1,pad_cols1+cols-1,channels-1) = this->data_;
+  //this->set_data不可用，因为其检查了长度均相等
+  this->data_ = std::move(new_data);
+
+  //调整：应当遵循构造函数中的raw_shapes分维度讨论
+  //this->raw_shapes_ = std::vector<uint32_t>{channels,new_rows,new_cols};
+  if (channels == 1 && new_rows == 1) {
+    this->raw_shapes_ = {new_cols};
+  } else if (channels == 1) {
+    this->raw_shapes_ = {new_rows, new_cols};
+  } else {
+    this->raw_shapes_ = {channels, new_rows, new_cols};
+  }
 }
 
 void Tensor<float>::Fill(float value) {
@@ -184,12 +220,15 @@ void Tensor<float>::Fill(const std::vector<float>& values, bool row_major) {
     const uint32_t channels = this->data_.n_slices;
 
     for (uint32_t i = 0; i < channels; ++i) {
-      auto& channel_data = this->data_.slice(i);
+      auto& channel_data = this->data_.slice(i);      //第i个通道的数据
+      // 通过构造函数将values中的数据转换为arma::fmat类型，因为arma::fmat是列主序的，
+      // 所以填充时把cols赋给行数，rows赋给列数
       const arma::fmat& channel_data_t =
           arma::fmat(values.data() + i * planes, this->cols(), this->rows());
       channel_data = channel_data_t.t();
     }
   } else {
+    // 列主序则直接填充
     std::copy(values.begin(), values.end(), this->data_.memptr());
   }
 }
@@ -204,6 +243,19 @@ void Tensor<float>::Show() {
 void Tensor<float>::Flatten(bool row_major) {
   CHECK(!this->data_.empty());
   // 请补充代码
+  // 优化：1维则提前返回
+  if (this->raw_shapes_.size() == 1) {
+    return;
+  }
+  unsigned int sz = this->size();
+  this->Reshape({sz},row_major);   //注意Reshape会判断维度
+  
+  /* 
+  system("pause")在linux下无效，需要采取缓冲区读取的方式
+  printf("!!!!!!!!!!!!!!!!!!!!!!!!!");
+  std::cout << "按 Enter 键继续..." << std::endl;
+  std::cin.get();
+  */
 }
 
 void Tensor<float>::Rand() {
@@ -238,6 +290,7 @@ void Tensor<float>::Reshape(const std::vector<uint32_t>& shapes,
   CHECK(shapes.size() <= 3);
   CHECK(current_size == origin_size);
 
+  // 只有来的数据是行主序的，才需要先把数据取出再填充；列主序则数据存储方式不变直接reshape即可
   std::vector<float> values;
   if (row_major) {
     values = this->values(true);
