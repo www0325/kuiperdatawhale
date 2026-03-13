@@ -749,7 +749,7 @@ int Graph::load(const std::string& parampath, const std::string& binpath)
             iss >> operand_name;
 
             Operand* r = get_operand(operand_name);
-            r->consumers.push_back(op);
+            r->consumers.push_back(op);          //手动双向绑定
             op->inputs.push_back(r);
         }
 

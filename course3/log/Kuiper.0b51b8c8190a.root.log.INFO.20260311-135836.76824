@@ -1,0 +1,7 @@
+Log file created at: 2026/03/11 13:58:36
+Running on machine: 0b51b8c8190a
+Running duration (h:mm:ss): 0:00:00
+Log line format: [IWEF]yyyymmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I20260311 13:58:36.808236 76824 main.cpp:15] Start test...
+E20260311 13:58:36.808920 76824 runtime_ir.cpp:36] Can not find the param path or bin path: course3/model_file/test_linear.pnnx.param course3/model_file/test_linear.pnnx.bin
+E20260311 13:58:36.809327 76824 runtime_ir.cpp:36] Can not find the param path or bin path: course3/model_file/test_linear.pnnx.param course3/model_file/test_linear.pnnx.bin

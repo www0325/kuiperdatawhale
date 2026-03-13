@@ -185,7 +185,7 @@ TEST(test_ir, pnnx_graph_all_homework) {
       const auto &params = operator_->params;
       ASSERT_EQ(params.size(), 3);
         /////////////////////////////////
-      ASSERT_EQ(params.count("bias"), 1);
+      ASSERT_EQ(params.count("bias"), 1);    //这是是否启用偏置，属于参数而非权重
       RuntimeParameter *parameter_bool = params.at("bias");
       ASSERT_NE(parameter_bool, nullptr);
       ASSERT_EQ((dynamic_cast<RuntimeParameterBool *>(parameter_bool)->value),
