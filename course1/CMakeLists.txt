@@ -9,16 +9,17 @@ find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(GTest REQUIRED)
 
-set(link_lib glog::glog GTest::gtest)
+set(link_lib glog::glog GTest::gtest)         #设置链接目标
 if(!WIN32)
     set(link_lib "${link_lib} pthread")
 endif()
-set(link_math_lib  ${ARMADILLO_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
-aux_source_directory(./test DIR_TEST_ARMA)
+set(link_math_lib  ${ARMADILLO_LIBRARIES} ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})  #设置数学库链接
+aux_source_directory(./test DIR_TEST_ARMA)       # 定义test目录下的源文件列表
 
 add_executable(kuiper_datawhale_course1 course1_main.cpp ${DIR_TEST_ARMA})
 target_link_libraries(kuiper_datawhale_course1 ${link_lib} ${link_math_lib} OpenMP::OpenMP_CXX)
 
+# 设置头文件搜索路径
 target_include_directories(kuiper_datawhale_course1 PUBLIC ${glog_INCLUDE_DIR})
 target_include_directories(kuiper_datawhale_course1 PUBLIC ${GTest_INCLUDE_DIR})
 target_include_directories(kuiper_datawhale_course1 PUBLIC ${Armadillo_INCLUDE_DIR})

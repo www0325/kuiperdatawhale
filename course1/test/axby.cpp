@@ -7,9 +7,11 @@
 void Axby(const arma::fmat &x, const arma::fmat &w, const arma::fmat &b,
           arma::fmat &y) {
   // 把代码写这里 完成y = w * x + b的运算
+  using namespace arma;
+  y = w * x + b;
 }
 
-TEST(test_arma, Axby) {
+TEST(test_arma, Axby) {    // 参数test_arma是测试套件名称，Axby是测试名称
   using namespace arma;
   fmat w = "1,2,3;"
            "4,5,6;"
@@ -34,6 +36,8 @@ TEST(test_arma, Axby) {
 
 void EPowerMinus(const arma::fmat &x, arma::fmat &y) {
   // 把代码写这里 完成y = e^{-x}的运算
+  using namespace arma;
+  y = exp(-x);
 }
 
 TEST(test_arma, e_power_minus) {
@@ -53,6 +57,8 @@ TEST(test_arma, e_power_minus) {
 
 void Axpy(const arma::fmat &x, arma::fmat &Y, float a, float y) {
   // 编写Y = a * x + y
+  using namespace arma;
+  Y = a * x + y;
 }
 
 TEST(test_arma, axpy) {
