@@ -3,6 +3,7 @@
 #include <deque>
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -210,6 +211,7 @@ void RuntimeGraph::Build(const std::string &input_name,
     return;
   }
 
+  // 逐步构造，每一阶段的构造中修改状态，在完成之后，应当检查其位于下一阶段
   if (graph_state_ == GraphState::NeedInit) {
     bool init_graph = Init();
     LOG_IF(FATAL, !init_graph) << "Init graph failed!";
@@ -237,17 +239,25 @@ void RuntimeGraph::Build(const std::string &input_name,
   RuntimeOperatorUtils::InitOperatorOutput(graph_->ops, operators_);
 
   // 构建拓扑顺序
+  /*
   topo_operators_.clear();
   for (const auto &[_, op] : operators_maps_) {
     // 根据输入节点构建拓扑排序
     if (op->type == "pnnx.Input" && !op->has_forward) {
-      this->ReverseTopo(op);
+       this->ReverseTopo(op);
+      // 修改1：Bfs，但是错误
+      //this->Bfs(op);
     }
   }
 
-  CHECK(topo_operators_.size() == operators_.size())
-      << "Build wrong topo queue";
   std::reverse(topo_operators_.begin(), topo_operators_.end());
+  */
+
+  //方法2：直接拓扑
+
+  this->Topo();
+  //添加全面的拓扑排序检查
+  CheckTopoQueueValid();
 
   graph_state_ = GraphState::Complete;
   input_name_ = input_name;
@@ -274,6 +284,119 @@ void RuntimeGraph::ReverseTopo(
     CHECK_EQ(op->has_forward, true);
   }
   this->topo_operators_.push_back(root_op);
+}
+
+void RuntimeGraph::Bfs(
+  const std::shared_ptr<RuntimeOperator> &root_op) {
+    CHECK(root_op != nullptr) << "current operator is nullptr";
+    //使用BFS 队列实现
+    std::queue<std::shared_ptr<RuntimeOperator>> q;
+    q.push(root_op);        // 仅拷贝shared_ptr本身，不会拷贝RuntimeOperator对象
+    root_op->has_forward = true;
+    while(!q.empty()){
+      auto cur = q.front();
+      q.pop();
+      this->topo_operators_.push_back(cur);
+      for(auto &[_,op]:cur->output_operators){
+        if(op!=nullptr && !op->has_forward){
+          op->has_forward = true;
+          q.push(op);
+        }
+      }
+    }
+    for(auto &op:this->operators_){       //检查是否均加入
+      CHECK_EQ(op->has_forward,true);
+    }
+
+}
+
+void RuntimeGraph::Topo() {
+  // 重新构建拓扑前，先清理遍历标记。
+  for (const auto &op : operators_) {
+    CHECK(op != nullptr) << "Meet nullptr in operators list";
+    op->has_forward = false;
+  }
+
+  // 统计每个节点的入度：前驱节点数量。
+  std::unordered_map<std::string, size_t> indegree_map;
+  indegree_map.reserve(operators_.size());
+  for (const auto &op : operators_) {
+    indegree_map[op->name] = 0;
+  }
+
+  for (const auto &op : operators_) {
+    for (const auto &[next_name, next_op] : op->output_operators) {
+      CHECK(next_op != nullptr)
+          << "Meet nullptr output operator from: " << op->name;
+      CHECK(indegree_map.count(next_name))
+          << "Output operator missing in operators map: " << next_name;
+      indegree_map[next_name] += 1;
+    }
+  }
+
+  // Kahn算法：先把所有入度为0的节点入队。
+  std::queue<std::shared_ptr<RuntimeOperator>> zero_indegree_queue;
+  for (const auto &op : operators_) {
+    CHECK(indegree_map.count(op->name))
+        << "Operator missing in indegree map: " << op->name;
+    if (indegree_map.at(op->name) == 0) {
+      zero_indegree_queue.push(op);
+    }
+  }
+
+  while (!zero_indegree_queue.empty()) {
+    std::shared_ptr<RuntimeOperator> cur_op = zero_indegree_queue.front();
+    zero_indegree_queue.pop();
+
+    topo_operators_.push_back(cur_op);
+    cur_op->has_forward = true;
+
+    for (const auto &[next_name, next_op] : cur_op->output_operators) {
+      CHECK(next_op != nullptr)
+          << "Meet nullptr output operator from: " << cur_op->name;
+      CHECK(indegree_map.count(next_name))
+          << "Output operator missing in indegree map: " << next_name;
+      CHECK_GT(indegree_map.at(next_name), 0)
+          << "Invalid indegree for operator: " << next_name;
+
+      indegree_map[next_name] -= 1;
+      if (indegree_map.at(next_name) == 0) {
+        zero_indegree_queue.push(next_op);
+      }
+    }
+  }
+
+  CHECK_EQ(topo_operators_.size(), operators_.size())
+      << "Topo sort failed, graph may contain cycle or disconnected relation";
+}
+
+void RuntimeGraph::CheckTopoQueueValid() const {
+  CHECK_EQ(topo_operators_.size(), operators_.size())     //空间一致
+      << "Topo queue size mismatch with operators";
+
+  std::unordered_map<std::string, size_t> index_map;
+  index_map.reserve(topo_operators_.size());        //预留空间，加入所有topu_op
+  for (size_t i = 0; i < topo_operators_.size(); ++i) {     //加入哈希，并检查不空不重
+    const auto &op = topo_operators_.at(i);
+    CHECK(op != nullptr) << "Meet nullptr in topo queue";
+    const auto [_, inserted] = index_map.insert({op->name, i});
+    CHECK(inserted) << "Duplicate operator in topo queue: " << op->name;
+  }
+
+  for (const auto &op : operators_) {
+    CHECK(op != nullptr) << "Meet nullptr in operators list";
+    CHECK(index_map.count(op->name))
+        << "Operator missing in topo queue: " << op->name;    //op存在
+    for (const auto &[next_name, next_op] : op->output_operators) {
+      CHECK(next_op != nullptr)
+          << "Meet nullptr output operator from: " << op->name;
+      CHECK(index_map.count(next_name))
+          << "Output operator missing in topo queue: " << next_name;
+      CHECK_LT(index_map.at(op->name), index_map.at(next_name))     //核心：前驱索引小于等于后继
+          << "Invalid topo relation: " << op->name << " should be before "
+          << next_name;
+    }
+  }
 }
 
 void RuntimeGraph::InitGraphAttrs(

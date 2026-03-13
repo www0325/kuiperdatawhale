@@ -100,6 +100,9 @@ private:
                   const std::shared_ptr<RuntimeOperator> &runtime_operator);
 
   void ReverseTopo(const std::shared_ptr<RuntimeOperator> &root_op);
+  void Bfs(const std::shared_ptr<RuntimeOperator> &root_op);
+  void Topo();
+  void CheckTopoQueueValid() const;
 
 private:
   enum class GraphState {

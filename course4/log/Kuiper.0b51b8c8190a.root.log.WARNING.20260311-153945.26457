@@ -1,0 +1,9 @@
+Log file created at: 2026/03/11 15:39:45
+Running on machine: 0b51b8c8190a
+Running duration (h:mm:ss): 0:00:00
+Log line format: [IWEF]yyyymmdd hh:mm:ss.uuuuuu threadid file:line] msg
+E20260311 15:39:45.720443 26457 runtime_ir.cpp:150] Can not find the param path or bin path: course4/model_file/resnet18_batch1.param course4/model_file/resnet18_batch1.pnnx.bin
+E20260311 15:39:45.721611 26457 runtime_ir.cpp:150] Can not find the param path or bin path: course4/model_file/simple_ops.pnnx.param course4/model_file/simple_ops.pnnx.bin
+E20260311 15:39:45.721793 26457 runtime_ir.cpp:150] Can not find the param path or bin path: course4/model_file/simple_ops.pnnx.param course4/model_file/simple_ops.pnnx.bin
+E20260311 15:39:45.721992 26457 runtime_ir.cpp:150] Can not find the param path or bin path: course4/model_file/simple_ops.pnnx.param course4/model_file/simple_ops.pnnx.bin
+E20260311 15:39:45.722146 26457 runtime_ir.cpp:150] Can not find the param path or bin path: course4/model_file/simple_ops2.pnnx.param course4/model_file/simple_ops2.pnnx.bin
