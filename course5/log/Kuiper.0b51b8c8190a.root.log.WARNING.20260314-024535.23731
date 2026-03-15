@@ -1,0 +1,6 @@
+Log file created at: 2026/03/14 02:45:35
+Running on machine: 0b51b8c8190a
+Running duration (h:mm:ss): 0:00:00
+Log line format: [IWEF]yyyymmdd hh:mm:ss.uuuuuu threadid file:line] msg
+E20260314 02:45:35.689746 23731 relu.cpp:69] The output tensor array in the relu layer has an empty tensor 0 th
+F20260314 02:45:35.696421 23731 layer_factory.cpp:47] Can not find the layer type: nn.Sigmoid

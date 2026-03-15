@@ -1,0 +1,5 @@
+Log file created at: 2026/03/14 02:44:56
+Running on machine: 0b51b8c8190a
+Running duration (h:mm:ss): 0:00:00
+Log line format: [IWEF]yyyymmdd hh:mm:ss.uuuuuu threadid file:line] msg
+F20260314 02:44:56.095455 23120 layer_factory.cpp:47] Can not find the layer type: nn.Sigmoid

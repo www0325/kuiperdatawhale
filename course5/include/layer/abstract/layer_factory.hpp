@@ -32,7 +32,7 @@
 namespace kuiper_infer {
 class LayerRegisterer {
  public:
-  typedef ParseParameterAttrStatus (*Creator)(
+  typedef ParseParameterAttrStatus (*Creator)(      //函数指针，传入runtimeOperator和未初始化的Layer
       const std::shared_ptr<RuntimeOperator> &op,
       std::shared_ptr<Layer> &layer);
 

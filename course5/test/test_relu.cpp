@@ -36,9 +36,11 @@ TEST(test_registry, registry2) {
   LayerRegisterer::CreateRegistry registry1 = LayerRegisterer::Registry();
   LayerRegisterer::CreateRegistry registry2 = LayerRegisterer::Registry();
   ASSERT_EQ(registry1, registry2);
+  //这里应当注册前后增1，而不是指定是2
+  uint32_t before_sz = registry1.size();
   LayerRegisterer::RegisterCreator("test_type", MyTestCreator);
   LayerRegisterer::CreateRegistry registry3 = LayerRegisterer::Registry();
-  ASSERT_EQ(registry3.size(), 2);
+  ASSERT_EQ(registry3.size(), before_sz+1);
   ASSERT_NE(registry3.find("test_type"), registry3.end());
 }
 

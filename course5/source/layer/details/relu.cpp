@@ -63,11 +63,13 @@ InferStatus ReluLayer::Forward(
             << "The input tensor array in the relu layer has an empty tensor " << i
             << " th";
 
+    // 直接取共享指针，而不要从容器中取指针的引用
     std::shared_ptr<Tensor<float>> output = outputs.at(i);
     if (output == nullptr || output->empty()) {
       DLOG(ERROR)
           << "The output tensor array in the relu layer has an empty tensor "
           << i << " th";
+      // 这里是新建了指针，因此要重新赋回vector
       output = std::make_shared<Tensor<float>>(input->shapes());
       outputs.at(i) = output;
     }
