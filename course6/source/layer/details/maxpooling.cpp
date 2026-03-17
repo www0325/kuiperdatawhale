@@ -73,6 +73,7 @@ InferStatus MaxPoolingLayer::Forward(
     } else {
       uint32_t input_h = input_data->rows();
       uint32_t input_w = input_data->cols();
+      //计算输出尺寸,仍然是在校验
       uint32_t output_h = uint32_t(std::floor(
           (int(input_h) - int(pooling_h) + 2 * padding_h_) / stride_h_ + 1));
       uint32_t output_w = uint32_t(std::floor(
@@ -96,6 +97,7 @@ InferStatus MaxPoolingLayer::Forward(
     }
   }
 
+  //开始实际计算,遍历batch
   for (uint32_t i = 0; i < batch; ++i) {
     const std::shared_ptr<Tensor<float>>& input_data = inputs.at(i);
     CHECK(input_data == nullptr || !input_data->empty())
@@ -115,6 +117,7 @@ InferStatus MaxPoolingLayer::Forward(
     const uint32_t output_w = uint32_t(
         std::floor((int(input_padded_w) - int(pooling_w)) / stride_w_ + 1));
 
+    //为输出分配空间
     std::shared_ptr<Tensor<float>> output_data = outputs.at(i);
     if (output_data == nullptr || output_data->empty()) {
       output_data =
@@ -128,25 +131,38 @@ InferStatus MaxPoolingLayer::Forward(
            "has an incorrectly sized tensor "
         << i << "th";
 
+    //遍历channel
     for (uint32_t ic = 0; ic < input_c; ++ic) {
       const arma::fmat& input_channel = input_data->slice(ic);
       arma::fmat& output_channel = output_data->slice(ic);
+      //定位输入输出矩阵，然后先列后行(因为arma::fmat是列主序)
+      //c定位窗口左边，上界是保证窗口右边在界内(c+pooling_w-1<input_padded_w)，步长为stride_w
       for (uint32_t c = 0; c < input_padded_w - pooling_w + 1; c += stride_w_) {
+        //根据c可以定位输出的列号(因为步长是stride_w)
         int output_col = int(c / stride_w_);
+        //同理r定位窗口上边
         for (uint32_t r = 0; r < input_padded_h - pooling_h + 1;
              r += stride_h_) {
+          //同理定位输出行号
           int output_row = int(r / stride_h_);
+          //取出输出的列
           float* output_channel_ptr = output_channel.colptr(output_col);
+          //初始化该值为最小
           float max_value = std::numeric_limits<float>::lowest();
+          //窗口内，横向扫描
           for (uint32_t w = 0; w < pooling_w; ++w) {
+            //这里c+w-padding_w其实写的不好，有可能是负数，代表是padding区域
             const float* col_ptr = input_channel.colptr(c + w - padding_w_);
+            //窗口内，纵向扫描
             for (uint32_t h = 0; h < pooling_h; ++h) {
               float current_value = 0.f;
+              //四个条件分别是判断不在上左下右四个padding区域
               if ((h + r >= padding_h_ && w + c >= padding_w_) &&
                   (h + r < input_h + padding_h_ &&
                    w + c < input_w + padding_w_)) {
                 current_value = *(col_ptr + r + h - padding_h_);
               } else {
+                //padding区最大池化则取lowest，平均池化则取0
                 current_value = std::numeric_limits<float>::lowest();
               }
               max_value = max_value > current_value ? max_value : current_value;

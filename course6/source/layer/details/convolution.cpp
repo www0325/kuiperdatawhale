@@ -43,6 +43,7 @@ ConvolutionLayer::ConvolutionLayer(uint32_t output_channel, uint32_t in_channel,
   if (groups != 1) {
     in_channel /= groups;
   }
+  //初始化权重张量，即卷积核，数量为output_channel，而通道数由于分组卷积，是要除以g的
   this->InitWeightParam(output_channel, in_channel, kernel_h, kernel_w);
   if (use_bias_) {
     this->InitBiasParam(output_channel, 1, 1, 1);
@@ -80,7 +81,7 @@ InferStatus ConvolutionLayer::Forward(
     return InferStatus::kInferFailedStrideParameterError;
   }
 
-  const uint32_t kernel_count = this->weights_.size();
+  const uint32_t kernel_count = this->weights_.size();    //输出通道数=卷积核数
   const uint32_t kernel_h = this->weights_.at(0)->rows();
   const uint32_t kernel_w = this->weights_.at(0)->cols();
   const uint32_t kernel_c = this->weights_.at(0)->channels();
@@ -98,6 +99,7 @@ InferStatus ConvolutionLayer::Forward(
   const uint32_t kernel_count_group = kernel_count / groups_;
   const uint32_t batch_size = inputs.size();
 
+  //提前展平卷积核
   if (kernel_matrix_arr_.empty()) {
     this->InitIm2ColWeight();
   }
@@ -112,6 +114,7 @@ InferStatus ConvolutionLayer::Forward(
     }
   }
 
+  //遍历batch
   for (uint32_t i = 0; i < batch_size; ++i) {
     const std::shared_ptr<Tensor<float>>& input = inputs.at(i);
     CHECK(input != nullptr && !input->empty())
@@ -123,6 +126,7 @@ InferStatus ConvolutionLayer::Forward(
     const uint32_t input_padded_h = input->rows() + 2 * padding_h_;
     const uint32_t input_padded_w = input->cols() + 2 * padding_w_;
 
+    //与池化的计算相同
     const uint32_t output_h =
         std::floor((int(input_padded_h) - int(kernel_h)) / stride_h_ + 1);
     const uint32_t output_w =
@@ -131,6 +135,7 @@ InferStatus ConvolutionLayer::Forward(
         << "The size of the output tensor should be greater than zero " << i
         << " th";
 
+    //两个数均整除g
     if (groups_ != 1) {
       CHECK(kernel_count % groups_ == 0);
       CHECK(input_c % groups_ == 0);
@@ -141,10 +146,11 @@ InferStatus ConvolutionLayer::Forward(
                           "should be greater than zero "
                        << i << " th";
 
-    uint32_t input_c_group = input_c / groups_;
+    uint32_t input_c_group = input_c / groups_;     //每组输入通道数
     CHECK(input_c_group == kernel_c) << "The number of channel for the kernel "
                                         "matrix and input tensor do not match";
 
+    //遍历每组
     for (uint32_t g = 0; g < groups_; ++g) {
       const auto& input_matrix =
           Im2Col(input, kernel_w, kernel_h, input->cols(), input->rows(),
@@ -163,6 +169,7 @@ InferStatus ConvolutionLayer::Forward(
              "incorrectly sized tensor "
           << i << "th";
 
+      //取出已经展平的卷积核向量
       const uint32_t kernel_count_group_start = kernel_count_group * g;
       for (uint32_t k = 0; k < kernel_count_group; ++k) {
         arma::frowvec kernel;
@@ -184,6 +191,8 @@ arma::fmat ConvolutionLayer::Im2Col(sftensor input, uint32_t kernel_w,
                                     uint32_t input_h, uint32_t input_c_group,
                                     uint32_t group, uint32_t row_len,
                                     uint32_t col_len) const {
+  //创建展平后的矩阵，行数是每组输入通道数*kernel_h*kernel_w
+  //列数是output_h*outputw，将来和展平的卷积核矩阵（一行一个卷积核）做矩阵乘法
   arma::fmat input_matrix(input_c_group * row_len, col_len);
   const uint32_t input_padded_h = input_h + 2 * padding_h_;
   const uint32_t input_padded_w = input_w + 2 * padding_w_;
@@ -234,6 +243,7 @@ void ConvolutionLayer::ConvGemmBias(
   if (!this->bias_.empty() && this->use_bias_) {
     std::shared_ptr<Tensor<float>> bias;
     bias = this->bias_.at(kernel_index);
+    //有偏置则乘完后的结果加上偏置矩阵
     if (bias != nullptr && !bias->empty()) {
       float bias_value = bias->index(0);
       output = kernel * input_matrix + bias_value;
@@ -278,6 +288,7 @@ void ConvolutionLayer::InitIm2ColWeight() {
   } else {
     // group != 1
     const uint32_t kernel_count_group = kernel_count / groups_;
+    //展开为行数为卷积核数，列数为输入通道*kernel_h*kernel_w
     std::vector<arma::frowvec> kernel_matrix_arr;
     for (uint32_t g = 0; g < groups_; ++g) {
       arma::fmat kernel_matrix_c(1, row_len * kernel_c);

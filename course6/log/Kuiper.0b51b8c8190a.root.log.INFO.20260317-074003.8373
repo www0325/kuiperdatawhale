@@ -1,0 +1,17 @@
+Log file created at: 2026/03/17 07:40:03
+Running on machine: 0b51b8c8190a
+Running duration (h:mm:ss): 0:00:00
+Log line format: [IWEF]yyyymmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I20260317 07:40:03.509325  8373 main.cpp:15] Start test...
+I20260317 07:40:03.578917  8373 tensor.cpp:200] Channel: 0
+I20260317 07:40:03.579000  8373 tensor.cpp:201] 
+   2.2000e+02   2.5600e+02
+   3.6400e+02   4.0000e+02
+I20260317 07:40:03.580015  8373 tensor.cpp:200] Channel: 1
+I20260317 07:40:03.580044  8373 tensor.cpp:201] 
+   2.2000e+02   2.5600e+02
+   3.6400e+02   4.0000e+02
+I20260317 07:40:03.580212  8373 tensor.cpp:200] Channel: 0
+I20260317 07:40:03.580229  8373 tensor.cpp:201] 
+   3.0000   5.0000
+   5.0000   7.0000
