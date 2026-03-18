@@ -79,6 +79,14 @@ std::shared_ptr<Tensor<float>> TensorElementMultiply(
     const std::shared_ptr<Tensor<float>>& tensor2);
 
 /**
+ * 张量逐元素取正弦
+ * @param tensor 输入张量
+ * @return 结果张量
+ */
+std::shared_ptr<Tensor<float>> TensorElementSin(
+    const std::shared_ptr<Tensor<float>>& tensor);
+
+/**
  * 创建一个张量
  * @param channels 通道数量
  * @param rows 行数

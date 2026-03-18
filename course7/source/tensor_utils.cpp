@@ -96,6 +96,14 @@ std::shared_ptr<Tensor<float>> TensorElementMultiply(
   }
 }
 
+std::shared_ptr<Tensor<float>> TensorElementSin(
+    const std::shared_ptr<Tensor<float>>& tensor) {
+  CHECK(tensor != nullptr);
+  sftensor output_tensor = TensorCreate(tensor->shapes());
+  output_tensor->set_data(arma::sin(tensor->data()));
+  return output_tensor;
+}
+
 std::shared_ptr<Tensor<float>> TensorCreate(uint32_t channels, uint32_t rows,
                                             uint32_t cols) {
   return std::make_shared<Tensor<float>>(channels, rows, cols);

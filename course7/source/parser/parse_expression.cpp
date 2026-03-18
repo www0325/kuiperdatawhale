@@ -27,8 +27,10 @@
 #include <stack>
 #include <utility>
 
+//小型DSL子系统，将字符串转换成可执行序列
 namespace kuiper_infer {
 
+//AST后序遍历,得到逆波兰表达式
 void ReversePolish(const std::shared_ptr<TokenNode> &root_node,
                    std::vector<std::shared_ptr<TokenNode>> &reverse_polish) {
   if (root_node != nullptr) {
@@ -38,6 +40,7 @@ void ReversePolish(const std::shared_ptr<TokenNode> &root_node,
   }
 }
 
+//词法分析，将成员statement解析成成员tokens(放token)和token_strs_(放token对应的字符串)
 void ExpressionParser::Tokenizer(bool retokenize) {
   if (!retokenize && !this->tokens_.empty()) {
     return;
@@ -64,6 +67,19 @@ void ExpressionParser::Tokenizer(bool retokenize) {
           std::string(statement_.begin() + i, statement_.begin() + i + 3);
       token_strs_.push_back(token_operation);
       i = i + 3;
+      } else if (c == 's') {
+        CHECK(i + 1 < statement_.size() && statement_.at(i + 1) == 'i')
+            << "Parse sin token failed, illegal character: "
+            << statement_.at(i + 1);
+        CHECK(i + 2 < statement_.size() && statement_.at(i + 2) == 'n')
+            << "Parse sin token failed, illegal character: "
+            << statement_.at(i + 2);
+        Token token(TokenType::TokenSin, i, i + 3);
+        tokens_.push_back(token);
+        std::string token_operation =
+          std::string(statement_.begin() + i, statement_.begin() + i + 3);
+        token_strs_.push_back(token_operation);
+        i = i + 3;
     } else if (c == 'm') {
       CHECK(i + 1 < statement_.size() && statement_.at(i + 1) == 'u')
               << "Parse multiply token failed, illegal character: "
@@ -77,7 +93,7 @@ void ExpressionParser::Tokenizer(bool retokenize) {
           std::string(statement_.begin() + i, statement_.begin() + i + 3);
       token_strs_.push_back(token_operation);
       i = i + 3;
-    } else if (c == '@') {
+    } else if (c == '@') {      //数字
       CHECK(i + 1 < statement_.size() && std::isdigit(statement_.at(i + 1)))
               << "Parse number token failed, illegal character: "
               << statement_.at(i + 1);
@@ -129,12 +145,14 @@ const std::vector<std::string> &ExpressionParser::token_strs() const {
   return this->token_strs_;
 }
 
+//语法解析：递归向下构建语法树，index表示的是当前指针位置
 std::shared_ptr<TokenNode> ExpressionParser::Generate_(int32_t &index) {
   CHECK(index < this->tokens_.size());
   const auto current_token = this->tokens_.at(index);
   CHECK(current_token.token_type == TokenType::TokenInputNumber ||
       current_token.token_type == TokenType::TokenAdd ||
-      current_token.token_type == TokenType::TokenMul);
+      current_token.token_type == TokenType::TokenMul ||
+      current_token.token_type == TokenType::TokenSin);
   if (current_token.token_type == TokenType::TokenInputNumber) {
     uint32_t start_pos = current_token.start_pos + 1;
     uint32_t end_pos = current_token.end_pos;
@@ -145,6 +163,30 @@ std::shared_ptr<TokenNode> ExpressionParser::Generate_(int32_t &index) {
                     this->statement_.begin() + end_pos);
     return std::make_shared<TokenNode>(std::stoi(str_number), nullptr, nullptr);
 
+  } else if (current_token.token_type == TokenType::TokenSin) {
+    std::shared_ptr<TokenNode> current_node = std::make_shared<TokenNode>();
+    current_node->num_index = int(current_token.token_type);
+
+    index += 1;
+    CHECK(index < this->tokens_.size()) << "Missing left bracket!";
+    CHECK(this->tokens_.at(index).token_type == TokenType::TokenLeftBracket);
+
+    index += 1;
+    CHECK(index < this->tokens_.size()) << "Missing correspond left token!";
+    const auto left_token = this->tokens_.at(index);
+    if (left_token.token_type == TokenType::TokenInputNumber ||
+        left_token.token_type == TokenType::TokenAdd ||
+        left_token.token_type == TokenType::TokenMul ||
+        left_token.token_type == TokenType::TokenSin) {
+      current_node->left = Generate_(index);
+    } else {
+      LOG(FATAL) << "Unknown token type: " << int(left_token.token_type);
+    }
+
+    index += 1;
+    CHECK(index < this->tokens_.size()) << "Missing right bracket!";
+    CHECK(this->tokens_.at(index).token_type == TokenType::TokenRightBracket);
+    return current_node;
   } else if (current_token.token_type == TokenType::TokenMul ||
       current_token.token_type == TokenType::TokenAdd) {
     std::shared_ptr<TokenNode> current_node = std::make_shared<TokenNode>();
@@ -158,9 +200,11 @@ std::shared_ptr<TokenNode> ExpressionParser::Generate_(int32_t &index) {
     CHECK(index < this->tokens_.size()) << "Missing correspond left token!";
     const auto left_token = this->tokens_.at(index);
 
+    //在左括号右边，可能是数字或嵌套表达式
     if (left_token.token_type == TokenType::TokenInputNumber ||
         left_token.token_type == TokenType::TokenAdd ||
-        left_token.token_type == TokenType::TokenMul) {
+        left_token.token_type == TokenType::TokenMul ||
+        left_token.token_type == TokenType::TokenSin) {
       current_node->left = Generate_(index);
     } else {
       LOG(FATAL) << "Unknown token type: " << int(left_token.token_type);
@@ -175,7 +219,8 @@ std::shared_ptr<TokenNode> ExpressionParser::Generate_(int32_t &index) {
     const auto right_token = this->tokens_.at(index);
     if (right_token.token_type == TokenType::TokenInputNumber ||
         right_token.token_type == TokenType::TokenAdd ||
-        right_token.token_type == TokenType::TokenMul) {
+        right_token.token_type == TokenType::TokenMul ||
+        right_token.token_type == TokenType::TokenSin) {
       current_node->right = Generate_(index);
     } else {
       LOG(FATAL) << "Unknown token type: " << int(right_token.token_type);

@@ -1,0 +1,6 @@
+Log file created at: 2026/03/18 11:57:02
+Running on machine: 0b51b8c8190a
+Running duration (h:mm:ss): 0:00:00
+Log line format: [IWEF]yyyymmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I20260318 11:57:02.651667 35893 main.cpp:15] Start test...
+F20260318 11:57:02.655512 35893 parse_expression.cpp:122] Unknown  illegal character: s
