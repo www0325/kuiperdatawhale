@@ -29,6 +29,7 @@ kuiper_infer::sftensor PreProcessImage(const cv::Mat &image,
   cv::split(normalize_image, split_images);
   assert(split_images.size() == input_c);
 
+  //为全局输入创建张量空间
   std::shared_ptr<Tensor<float>> input =
       std::make_shared<Tensor<float>>(input_c, input_h, input_w);
   input->Fill(0.f);
@@ -37,6 +38,7 @@ kuiper_infer::sftensor PreProcessImage(const cv::Mat &image,
   int offset = 0;
   for (const auto &split_image : split_images) {
     assert(split_image.total() == input_w * input_h);
+    //因为opencv行主序和arma列主序，需要转置再copy
     const cv::Mat &split_image_t = split_image.t();
     memcpy(input->slice(index).memptr(), split_image_t.data,
            sizeof(float) * split_image.total());
@@ -149,7 +151,7 @@ TEST(test_network, yolov5) {
   std::vector<std::string> image_paths;
 
   for (uint32_t i = 0; i < batch_size; ++i) {
-    const std::string &image_path = "./course9/model_file/car.jpg";  // 可以放不同的图片
+    const std::string &image_path = "./course8/model_file/arm.png";  // 可以放不同的图片
     image_paths.push_back(image_path);
   }
   const std::string &param_path = "course9/model_file/yolov5s.pnnx.param";
